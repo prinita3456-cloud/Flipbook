@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flipbook Aset Kripto - Responsive</title>
+    <title>Flipbook Aset Kripto - Flexible Space</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
 
     <style>
+        * {
+            box-sizing: border-box; /* Memastikan padding tidak merusak ukuran % */
+        }
+
         body { 
             margin: 0; 
             background: #121212; 
@@ -18,12 +22,13 @@
             height: 100vh; 
             width: 100vw;
             overflow: hidden; 
+            padding: 40px 0; /* Memberikan space nyata di atas dan bawah layar */
         }
 
-        /* Container utama menggunakan persen agar fleksibel */
+        /* Container utama dengan batas tinggi agar ada space */
         #canvas-container {
-            width: 90%;  /* Mengambil 90% lebar layar */
-            height: 85%; /* Mengambil 85% tinggi layar */
+            width: 90%; 
+            height: 80%; /* Dikurangi sedikit dari 85% supaya space atas-bawah lebih terasa */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -31,6 +36,8 @@
 
         #book-container { 
             visibility: hidden; 
+            /* Memberikan sedikit bayangan luar agar buku terlihat mengambang di atas background */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
         }
 
         .page-content { 
@@ -44,7 +51,7 @@
             width: 100% !important; 
             height: 100% !important; 
             display: block; 
-            object-fit: contain; /* Memastikan konten PDF tetap proporsional */
+            object-fit: contain;
         }
 
         #loader { 
@@ -100,11 +107,10 @@
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
-                // Pengaturan ukuran fleksibel
                 const pageFlip = new St.PageFlip(container, {
-                    width: 400, // Rasio lebar
-                    height: 550, // Rasio tinggi
-                    size: "stretch", // Kunci agar mengikuti ukuran container (%)
+                    width: 400, 
+                    height: 550, 
+                    size: "stretch", 
                     minWidth: 200,
                     maxWidth: 2000,
                     minHeight: 300,
@@ -112,7 +118,8 @@
                     maxShadowOpacity: 0.5,
                     showCover: true,
                     usePortrait: true,
-                    flippingTime: 800
+                    flippingTime: 800,
+                    drawShadow: true // Menambah efek nyata saat membalik
                 });
 
                 pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
