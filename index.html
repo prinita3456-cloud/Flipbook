@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flipbook Aset Kripto - Final Edition</title>
+    <title>Flipbook Aset Kripto - Desktop Optimized</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
@@ -22,16 +22,13 @@
             height: 100vh; 
             width: 100vw;
             overflow: hidden; 
-            /* Memberikan space atau margin luar agar tidak mepet ke layar browser */
-            padding: 5vh 5vw; 
         }
 
-        /* Container Utama yang membatasi ukuran flipbook */
+        /* Container Utama: Dioptimalkan untuk Desktop */
         #canvas-container {
-            width: 100%;
-            height: 100%;
-            max-width: 900px;  /* Membatasi lebar agar tidak kegedean di desktop */
-            max-height: 80vh;  /* Membatasi tinggi agar ada space atas-bawah */
+            width: 95%;      /* Hampir memenuhi lebar layar */
+            height: 85vh;    /* Menyisakan 15% space untuk atas & bawah */
+            max-width: 1200px; /* Batas lebar maksimal agar tidak terlalu melar di layar ultra-wide */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -40,7 +37,7 @@
 
         #book-container { 
             visibility: hidden; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            box-shadow: 0 30px 70px rgba(0,0,0,0.8);
         }
 
         .page-content { 
@@ -51,7 +48,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
         }
 
         canvas { 
@@ -93,7 +89,7 @@
 
     <div id="loader">
         <div class="spinner"></div>
-        <p>Memuat Flipbook... <span id="percent">0%</span></p>
+        <p>Menyiapkan Materi Desktop... <span id="percent">0%</span></p>
     </div>
 
     <div id="canvas-container">
@@ -116,8 +112,8 @@
 
                 for (let i = 1; i <= totalPages; i++) {
                     const page = await pdf.getPage(i);
-                    // Menggunakan scale yang cukup untuk ketajaman namun tidak berat
-                    const viewport = page.getViewport({ scale: 1.5 }); 
+                    // Scale 2.0 agar teks di layar desktop tajam dan jelas
+                    const viewport = page.getViewport({ scale: 2.0 }); 
                     
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
@@ -131,25 +127,24 @@
                     pageDiv.appendChild(canvas);
                     container.appendChild(pageDiv);
                     
-                    // Update progress
                     percentText.innerText = `${Math.round((i / totalPages) * 100)}%`;
                 }
 
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
-                // Inisialisasi PageFlip dengan ukuran fleksibel yang dibatasi
+                // Setting Desktop: Menampilkan 2 halaman berdampingan (spread)
                 const pageFlip = new St.PageFlip(container, {
-                    width: 450, 
-                    height: 600, 
+                    width: 550,       // Lebar satu halaman
+                    height: 750,      // Tinggi halaman
                     size: "stretch", 
-                    minWidth: 200,
-                    maxWidth: 1000,
-                    minHeight: 300,
-                    maxHeight: 1200,
+                    minWidth: 300,
+                    maxWidth: 1500,
+                    minHeight: 400,
+                    maxHeight: 2000,
                     maxShadowOpacity: 0.5,
-                    showCover: true,
-                    usePortrait: true, // Otomatis 1 halaman di mobile, 2 di desktop
+                    showCover: true,   // Halaman pertama muncul sebagai cover tunggal
+                    usePortrait: false, // Memaksa tampilan 2 halaman (landscape) di desktop
                     flippingTime: 1000,
                     drawShadow: true
                 });
@@ -158,7 +153,7 @@
 
             } catch (error) {
                 console.error(error);
-                percentText.innerText = "Error memuat file PDF.";
+                percentText.innerText = "Error: File PDF tidak terbaca.";
             }
         }
 
