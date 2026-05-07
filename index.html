@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flipbook Aset Kripto - Flexible Space</title>
+    <title>Flipbook Aset Kripto - Final Edition</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
 
     <style>
         * {
-            box-sizing: border-box; /* Memastikan padding tidak merusak ukuran % */
+            box-sizing: border-box;
         }
 
         body { 
@@ -22,29 +22,36 @@
             height: 100vh; 
             width: 100vw;
             overflow: hidden; 
-            padding: 40px 0; /* Memberikan space nyata di atas dan bawah layar */
+            /* Memberikan space atau margin luar agar tidak mepet ke layar browser */
+            padding: 5vh 5vw; 
         }
 
-        /* Container utama dengan batas tinggi agar ada space */
+        /* Container Utama yang membatasi ukuran flipbook */
         #canvas-container {
-            width: 90%; 
-            height: 80%; /* Dikurangi sedikit dari 85% supaya space atas-bawah lebih terasa */
+            width: 100%;
+            height: 100%;
+            max-width: 900px;  /* Membatasi lebar agar tidak kegedean di desktop */
+            max-height: 80vh;  /* Membatasi tinggi agar ada space atas-bawah */
             display: flex;
             justify-content: center;
             align-items: center;
+            perspective: 2000px;
         }
 
         #book-container { 
             visibility: hidden; 
-            /* Memberikan sedikit bayangan luar agar buku terlihat mengambang di atas background */
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
         }
 
         .page-content { 
             background: white; 
             width: 100%; 
             height: 100%; 
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
         }
 
         canvas { 
@@ -54,26 +61,48 @@
             object-fit: contain;
         }
 
+        /* Loading Screen */
         #loader { 
             position: fixed; 
             color: white; 
             text-align: center; 
             z-index: 100;
+            background: #121212;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
+
+        .spinner { 
+            border: 4px solid rgba(255,255,255,0.1); 
+            border-left-color: #38bdf8; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <p>Menyiapkan Flipbook... <span id="percent">0%</span></p>
+        <div class="spinner"></div>
+        <p>Memuat Flipbook... <span id="percent">0%</span></p>
     </div>
 
     <div id="canvas-container">
-        <div id="book-container"></div>
+        <div id="book-container">
+            </div>
     </div>
 
     <script>
-        const pdfPath = 'materi.pdf';
+        const pdfPath = 'materi.pdf'; 
         const container = document.getElementById('book-container');
         const percentText = document.getElementById('percent');
         
@@ -87,6 +116,7 @@
 
                 for (let i = 1; i <= totalPages; i++) {
                     const page = await pdf.getPage(i);
+                    // Menggunakan scale yang cukup untuk ketajaman namun tidak berat
                     const viewport = page.getViewport({ scale: 1.5 }); 
                     
                     const pageDiv = document.createElement('div');
@@ -101,31 +131,34 @@
                     pageDiv.appendChild(canvas);
                     container.appendChild(pageDiv);
                     
+                    // Update progress
                     percentText.innerText = `${Math.round((i / totalPages) * 100)}%`;
                 }
 
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
+                // Inisialisasi PageFlip dengan ukuran fleksibel yang dibatasi
                 const pageFlip = new St.PageFlip(container, {
-                    width: 400, 
-                    height: 550, 
+                    width: 450, 
+                    height: 600, 
                     size: "stretch", 
                     minWidth: 200,
-                    maxWidth: 2000,
+                    maxWidth: 1000,
                     minHeight: 300,
-                    maxHeight: 2000,
+                    maxHeight: 1200,
                     maxShadowOpacity: 0.5,
                     showCover: true,
-                    usePortrait: true,
-                    flippingTime: 800,
-                    drawShadow: true // Menambah efek nyata saat membalik
+                    usePortrait: true, // Otomatis 1 halaman di mobile, 2 di desktop
+                    flippingTime: 1000,
+                    drawShadow: true
                 });
 
                 pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
 
             } catch (error) {
-                percentText.innerText = "Gagal memuat PDF.";
+                console.error(error);
+                percentText.innerText = "Error memuat file PDF.";
             }
         }
 
