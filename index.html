@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flipbook Aset Kripto - Flexible Space</title>
+    <title>Flipbook Aset Kripto - Full Screen Optimized</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
 
     <style>
         * {
-            box-sizing: border-box; /* Memastikan padding tidak merusak ukuran % */
+            box-sizing: border-box;
         }
 
         body { 
@@ -21,30 +21,30 @@
             align-items: center; 
             height: 100vh; 
             width: 100vw;
-            overflow: hidden; 
-            padding: 40px 0; /* Memberikan space nyata di atas dan bawah layar */
+            overflow: hidden;
+            /* Memberikan space 5% dari tinggi layar di atas dan bawah */
+            padding: 5vh 0; 
         }
 
-        /* Container utama dengan batas tinggi agar ada space */
         #canvas-container {
-            width: 90%; 
-            height: 80%; /* Dikurangi sedikit dari 85% supaya space atas-bawah lebih terasa */
+            width: 95%;      
+            height: 90vh; /* Menggunakan 90% tinggi layar agar terlihat besar */
             display: flex;
             justify-content: center;
             align-items: center;
+            perspective: 2000px;
         }
 
         #book-container { 
             visibility: hidden; 
-            /* Memberikan sedikit bayangan luar agar buku terlihat mengambang di atas background */
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            box-shadow: 0 25px 60px rgba(0,0,0,0.8);
         }
 
         .page-content { 
             background: white; 
             width: 100%; 
             height: 100%; 
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
 
         canvas { 
@@ -57,15 +57,33 @@
         #loader { 
             position: fixed; 
             color: white; 
-            text-align: center; 
             z-index: 100;
+            background: #121212;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
+
+        .spinner { 
+            border: 4px solid rgba(255,255,255,0.1); 
+            border-left-color: #38bdf8; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            animation: spin 1s linear infinite; 
+            margin-bottom: 10px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div id="loader">
-        <p>Menyiapkan Flipbook... <span id="percent">0%</span></p>
+        <div class="spinner"></div>
+        <p>Memuat Materi... <span id="percent">0%</span></p>
     </div>
 
     <div id="canvas-container">
@@ -73,7 +91,7 @@
     </div>
 
     <script>
-        const pdfPath = 'materi.pdf';
+        const pdfPath = 'materi.pdf'; 
         const container = document.getElementById('book-container');
         const percentText = document.getElementById('percent');
         
@@ -87,7 +105,7 @@
 
                 for (let i = 1; i <= totalPages; i++) {
                     const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.5 }); 
+                    const viewport = page.getViewport({ scale: 2.0 }); 
                     
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
@@ -108,18 +126,18 @@
                 container.style.visibility = 'visible';
 
                 const pageFlip = new St.PageFlip(container, {
-                    width: 400, 
-                    height: 550, 
+                    width: 500, 
+                    height: 700, 
                     size: "stretch", 
-                    minWidth: 200,
-                    maxWidth: 2000,
-                    minHeight: 300,
-                    maxHeight: 2000,
+                    minWidth: 300,
+                    maxWidth: 1800,
+                    minHeight: 400,
+                    maxHeight: 2500,
                     maxShadowOpacity: 0.5,
                     showCover: true,
-                    usePortrait: true,
-                    flippingTime: 800,
-                    drawShadow: true // Menambah efek nyata saat membalik
+                    usePortrait: false, // Menampilkan 2 halaman di layar lebar agar mantap
+                    flippingTime: 1000,
+                    drawShadow: true
                 });
 
                 pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
