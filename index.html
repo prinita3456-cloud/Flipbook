@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flipbook Aset Kripto - Stable & Responsive</title>
+    <title>Flipbook Aset Kripto - Full Screen Responsive</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
@@ -11,23 +11,36 @@
     <style>
         * { box-sizing: border-box; }
         body { 
-            margin: 0; background: #121212; display: flex; justify-content: center; 
-            align-items: center; height: 100vh; width: 100vw; overflow: hidden; padding: 3vh 3vw; 
+            margin: 0; padding: 0; background: #121212; 
+            width: 100vw; height: 100vh; overflow: hidden; 
+            font-family: system-ui, -apple-system, sans-serif;
         }
+        
+        /* Wadah utama dipaksa memenuhi 100% layar monitor / popup */
         #canvas-container {
-            width: 100%; height: 100%; max-width: 1300px; max-height: 85vh;
-            display: flex; justify-content: center; align-items: center; perspective: 2000px;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
         }
+        
+        /* Buku diletakkan di tengah-tengah secara absolut */
         #book-container { 
-            visibility: hidden; box-shadow: 0 25px 60px rgba(0,0,0,0.8); width: 100%; height: 100%;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            visibility: hidden; 
+            box-shadow: 0 30px 70px rgba(0,0,0,0.9);
         }
+        
         .page-content { background: white; width: 100%; height: 100%; overflow: hidden; }
-        canvas { width: 100% !important; height: 100% !important; display: block; object-fit: contain; }
+        canvas { width: 100% !important; height: 100% !important; display: block; object-fit: fill; }
         
         #loader { 
             position: fixed; color: white; z-index: 100; background: #121212; inset: 0;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 20px;
+            text-align: center; padding: 20px;
         }
         .spinner { 
             border: 4px solid rgba(255,255,255,0.1); border-left-color: #38bdf8; 
@@ -61,17 +74,18 @@
                 const pdf = await loadingTask.promise;
                 const totalPages = pdf.numPages;
 
-                // 1. Deteksi aspek rasio asli dokumen dari halaman pertama
+                // 1. Ambil aspek rasio asli dokumen
                 const firstPage = await pdf.getPage(1);
                 const originalViewport = firstPage.getViewport({ scale: 1.0 });
                 
+                // Menentukan ukuran dasar aspek rasio
                 const baseWidth = 500;
                 const baseHeight = baseWidth * (originalViewport.height / originalViewport.width);
                 
-                // Skala 1.3: Super cepat di-render, memori aman, teks tetap tajam
-                const renderViewport = firstPage.getViewport({ scale: 1.3 });
+                // Menggunakan skala 1.5 agar teks tetap tajam saat diregangkan ke layar besar
+                const renderViewport = firstPage.getViewport({ scale: 1.5 });
 
-                // 2. Render seluruh halaman secara sekuensial dengan indikator progres yang jelas
+                // 2. Render seluruh halaman ke dalam struktur HTML
                 for (let i = 1; i <= totalPages; i++) {
                     percentText.innerText = `Memproses halaman ${i} dari ${totalPages}... (${Math.round((i / totalPages) * 100)}%)`;
                     
@@ -90,42 +104,35 @@
                     container.appendChild(pageDiv);
                 }
 
-                // 3. Hilangkan loader setelah semua halaman siap masuk cetakan
+                // 3. Tampilkan kontainer utama
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
-                // 4. Jalankan mesin PageFlip
+                // 4. Jalankan mesin PageFlip dengan setelan maksi (Mendukung resolusi tinggi/4K)
                 const pageFlip = new St.PageFlip(container, {
                     width: baseWidth, 
                     height: baseHeight, 
-                    size: "stretch", // Mengikuti ukuran layar secara fleksibel
-                    minWidth: 250, maxWidth: 1400,
-                    minHeight: 350, maxHeight: 2000,
+                    size: "stretch", // Memaksa meregang mengikuti wadah luar
+                    minWidth: 200, 
+                    maxWidth: 3000,  // Batas atas dilebarkan agar tidak mengunci ukuran kecil
+                    minHeight: 200, 
+                    maxHeight: 3000, // Batas atas dilebarkan agar tidak mengunci ukuran kecil
                     showCover: true,
-                    usePortrait: true, // Otomatis 1 halaman di HP tegak, 2 halaman di laptop/PC
+                    usePortrait: true, 
                     flippingTime: 600,
                     drawShadow: true
                 });
 
                 pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
 
-                // 5. Paksa flipbook kalkulasi ulang ukuran jika browser di-resize atau HP diputar (Landscape/Portrait)
+                // 5. Otomatis hitung ulang ukuran buku jika ukuran browser di-resize atau popup berubah ukuran
                 window.addEventListener('resize', () => {
                     pageFlip.update();
                 });
 
             } catch (error) {
                 console.error(error);
-                // Menampilkan pesan edukasi jika terjadi kesalahan teknis path/CORS
-                percentText.innerHTML = `
-                    <span style="color: #f87171; display:block; margin-top:10px;">Gagal memuat dokumen!</span>
-                    <small style="color: #9ca3af; font-weight:normal; display:block; margin-top:5px; line-height:1.4;">
-                        Penyebab umum:<br>
-                        1. File <b>"${pdfPath}"</b> belum ditaruh di folder yang sama.<br>
-                        2. Anda membuka file HTML langsung (double click file). Browser memblokir PDF demi keamanan.<br>
-                        <i>Solusi: Jalankan menggunakan Live Server di VS Code atau hosting.</i>
-                    </small>
-                `;
+                percentText.innerHTML = `<span style="color: #f87171; display:block; margin-top:10px;">Gagal memuat dokumen PDF. Pastikan file tersedia.</span>`;
             }
         }
 
