@@ -36,7 +36,6 @@
             width: 100%; 
             height: 100%; 
             overflow: hidden; 
-            /* Memastikan tidak ada border aneh yang bikin engsel misah */
             border: none !important;
         }
         
@@ -44,7 +43,6 @@
             width: 100% !important; 
             height: 100% !important; 
             display: block; 
-            /* Mengunci gambar agar rapat sempurna ke engsel tengah */
             object-fit: fill; 
         }
         
@@ -96,7 +94,7 @@
                 finalSingleWidth = maxSinglePageWidth;
                 finalSingleHeight = finalSingleWidth * pdfRatio;
             } else {
-                finalSingleHeight = maxSinglePageHeight;
+                finalSingleHeight = maxAllocatedHeight;
                 finalSingleWidth = finalSingleHeight / pdfRatio;
             }
 
@@ -122,16 +120,21 @@
                 container.style.width = size.containerWidth + 'px';
                 container.style.height = size.containerHeight + 'px';
 
+                // 1. SISIPKAN KERTAS PUTIH PALING DEPAN (KIRI)
+                const frontBlank = document.createElement('div');
+                frontBlank.className = 'page-content';
+                frontBlank.setAttribute('data-density', 'soft');
+                container.appendChild(frontBlank);
+
+                // 2. LOOP MEMBACA HALAMAN PDF (1 sampai 50)
                 for (let i = 1; i <= totalPages; i++) {
                     percentText.innerText = `Memproses halaman ${i} dari ${totalPages}... (${Math.round((i / totalPages) * 100)}%)`;
                     
                     const page = await pdf.getPage(i);
-                    const renderViewport = page.getViewport({ scale: 2.0 }); // Skala tinggi agar teks tidak pecah
+                    const renderViewport = page.getViewport({ scale: 2.0 }); 
                     
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
-                    
-                    // MEMAKSA SEMUA HALAMAN TERMASUK COVER MENJADI SOFT/LUNAK AGAR TIDAK PATAH
                     pageDiv.setAttribute('data-density', 'soft');
                     
                     const canvas = document.createElement('canvas');
@@ -145,6 +148,12 @@
                     container.appendChild(pageDiv);
                 }
 
+                // 3. SISIPKAN KERTAS PUTIH PALING BELAKANG (KANAN)
+                const backBlank = document.createElement('div');
+                backBlank.className = 'page-content';
+                backBlank.setAttribute('data-density', 'soft');
+                container.appendChild(backBlank);
+
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
@@ -157,7 +166,7 @@
                         size: "stretch", 
                         minWidth: 200, maxWidth: 3000,
                         minHeight: 200, maxHeight: 3000,
-                        showCover: true, 
+                        showCover: false, // DIUBAH JADI FALSE agar buku langsung terbuka berpasangan sejak awal
                         mode: isDesktop ? 'double' : 'portrait', 
                         flippingTime: 800, 
                         drawShadow: true,
