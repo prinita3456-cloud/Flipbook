@@ -27,24 +27,22 @@
         }
         
         #book-container { 
-            --page-width: 0px;
-            --page-height: 0px;
             visibility: hidden; 
             box-shadow: 0 30px 70px rgba(0,0,0,0.8);
         }
         
         .page-content { 
             background: white; 
-            width: var(--page-width) !important; 
-            height: var(--page-height) !important; 
+            width: 100%; 
+            height: 100%; 
             overflow: hidden; 
         }
         
         canvas { 
-            width: var(--page-width) !important; 
-            height: var(--page-height) !important; 
+            width: 100% !important; 
+            height: 100% !important; 
             display: block; 
-            object-fit: fill; 
+            object-fit: fill; /* Mengunci gambar agar rapat ke engsel tengah */
         }
         
         #loader { 
@@ -120,20 +118,7 @@
                 const size = calculateBookSize();
                 container.style.width = size.containerWidth + 'px';
                 container.style.height = size.containerHeight + 'px';
-                
-                container.style.setProperty('--page-width', size.width + 'px');
-                container.style.setProperty('--page-height', size.height + 'px');
 
-                /* =============================================================
-                   1. SISIPKAN KERTAS PUTIH POLOS DI PALING DEPAN (SAMPUL LUAR)
-                   ============================================================= */
-                const frontCoverBlank = document.createElement('div');
-                frontCoverBlank.className = 'page-content';
-                container.appendChild(frontCoverBlank);
-
-                /* =============================================================
-                   2. RENDER SEMUA HALAMAN PDF (1 SAMPAI 50) TANPA KECUALI
-                   ============================================================= */
                 for (let i = 1; i <= totalPages; i++) {
                     percentText.innerText = `Memproses halaman ${i} dari ${totalPages}... (${Math.round((i / totalPages) * 100)}%)`;
                     
@@ -142,6 +127,12 @@
                     
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
+                    
+                    // ====================================================================
+                    // KUNCI JAWABAN: Paksa SETIAP halaman menjadi kertas lunak (soft)
+                    // Ini menonaktifkan fisika hardcover bawaan library untuk cover depan & belakang
+                    // ====================================================================
+                    pageDiv.setAttribute('data-density', 'soft');
                     
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
@@ -153,13 +144,6 @@
                     pageDiv.appendChild(canvas);
                     container.appendChild(pageDiv);
                 }
-
-                /* =============================================================
-                   3. SISIPKAN KERTAS PUTIH POLOS DI PALING BELAKANG (PENUTUP LUAR)
-                   ============================================================= */
-                const backCoverBlank = document.createElement('div');
-                backCoverBlank.className = 'page-content';
-                container.appendChild(backCoverBlank);
 
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
@@ -173,7 +157,7 @@
                         size: "stretch", 
                         minWidth: 200, maxWidth: 4000,
                         minHeight: 200, maxHeight: 4000,
-                        showCover: true, 
+                        showCover: true, // Tetap gunakan mode cover supaya membuka & menutup seperti buku
                         mode: isDesktop ? 'double' : 'portrait', 
                         flippingTime: 750, 
                         drawShadow: true,
@@ -190,9 +174,6 @@
                     
                     container.style.width = newSize.containerWidth + 'px';
                     container.style.height = newSize.containerHeight + 'px';
-                    
-                    container.style.setProperty('--page-width', newSize.width + 'px');
-                    container.style.setProperty('--page-height', newSize.height + 'px');
                     
                     pageFlip.update({
                         width: newSize.width,
