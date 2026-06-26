@@ -26,23 +26,27 @@
             align-items: center;
         }
         
+        /* KUNCI UTAMA: Menggunakan CSS Variables untuk mengunci ukuran absolut */
         #book-container { 
+            --page-width: 0px;
+            --page-height: 0px;
             visibility: hidden; 
             box-shadow: 0 30px 70px rgba(0,0,0,0.8);
         }
         
+        /* Memaksa setiap lembar halaman memiliki ukuran pixel yang rigid/kaku saat ditekuk */
         .page-content { 
             background: white; 
-            width: 100%; 
-            height: 100%; 
+            width: var(--page-width) !important; 
+            height: var(--page-height) !important; 
             overflow: hidden; 
         }
         
+        /* Mencegah gambar hancur atau terpisah dari engsel jilid tengah saat simulasi 3D */
         canvas { 
-            width: 100% !important; 
-            height: 100% !important; 
+            width: var(--page-width) !important; 
+            height: var(--page-height) !important; 
             display: block; 
-            /* Mengunci semua halaman (termasuk cover & penutup) agar menempel rapat di engsel tengah */
             object-fit: fill; 
         }
         
@@ -119,6 +123,10 @@
                 const size = calculateBookSize();
                 container.style.width = size.containerWidth + 'px';
                 container.style.height = size.containerHeight + 'px';
+                
+                // Suntikkan ukuran pixel pertama kali ke CSS Variables
+                container.style.setProperty('--page-width', size.width + 'px');
+                container.style.setProperty('--page-height', size.height + 'px');
 
                 for (let i = 1; i <= totalPages; i++) {
                     percentText.innerText = `Memproses halaman ${i} dari ${totalPages}... (${Math.round((i / totalPages) * 100)}%)`;
@@ -128,9 +136,6 @@
                     
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
-                    
-                    // SEMUA HALAMAN DISERAGAMKAN: Tidak ada data-density="hard" baik di awal maupun di akhir
-                    // Ini memastikan engsel halaman 1 dan halaman 50 tidak rusak atau meleset
                     
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
@@ -155,11 +160,11 @@
                         size: "stretch", 
                         minWidth: 200, maxWidth: 4000,
                         minHeight: 200, maxHeight: 4000,
-                        showCover: true, // Membuat halaman pertama (awal) dan terakhir (akhir) tampil sebagai single cover yang rapi
+                        showCover: true, 
                         mode: isDesktop ? 'double' : 'portrait', 
                         flippingTime: 750, 
                         drawShadow: true,
-                        maxShadowOpacity: 0.25
+                        maxShadowOpacity: 0.2
                     });
 
                     pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
@@ -172,6 +177,10 @@
                     
                     container.style.width = newSize.containerWidth + 'px';
                     container.style.height = newSize.containerHeight + 'px';
+                    
+                    // Update CSS Variables secara dinamis saat layar di-resize
+                    container.style.setProperty('--page-width', newSize.width + 'px');
+                    container.style.setProperty('--page-height', newSize.height + 'px');
                     
                     pageFlip.update({
                         width: newSize.width,
