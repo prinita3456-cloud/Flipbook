@@ -46,12 +46,31 @@
             object-fit: fill; 
         }
         
+        /* Wadah Logo di Pojok Kiri Atas */
+        .logo-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 90; /* Sejajar dengan tombol kontrol, di bawah loader */
+            display: flex;
+            align-items: center;
+            pointer-events: none; /* Supaya tidak mengganggu klik di area sekitar logo */
+        }
+
+        .logo-img {
+            height: 45px; /* Ukuran pas yang pas dengan tinggi tombol kanan */
+            width: auto;
+            object-fit: contain;
+            /* Memberi bayangan halus agar logo tetap terlihat jelas di background gelap */
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); 
+        }
+        
         /* Wadah untuk Tombol Kontrol di Pojok Kanan Atas */
         .controls-container {
             position: fixed;
             top: 20px;
             right: 20px;
-            z-index: 90; /* Di bawah loader (100) tapi di atas buku */
+            z-index: 90; 
             display: flex;
             gap: 10px;
         }
@@ -104,6 +123,10 @@
     <div id="loader">
         <div class="spinner"></div>
         <p>Membuka Materi... <span id="percent">0%</span></p>
+    </div>
+
+    <div class="logo-container">
+        <img src="logo-ifii.png" alt="Logo IFII" class="logo-img">
     </div>
 
     <div class="controls-container">
@@ -279,7 +302,6 @@
                 dlBtn.addEventListener('click', () => {
                     const link = document.createElement('a');
                     link.href = pdfPath;
-                    // Nama file saat diunduh oleh pengguna
                     link.download = 'Buku_Saku_Panduan_Mengenal_Aset_Kripto.pdf'; 
                     document.body.appendChild(link);
                     link.click();
