@@ -16,7 +16,6 @@
             font-family: system-ui, -apple-system, sans-serif;
         }
         
-        /* Mengunci ruang perspektif 3D sejak awal agar pergerakan cover halus */
         #canvas-container {
             position: relative;
             width: 100vw;
@@ -25,28 +24,19 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            perspective: 2000px; 
-            -webkit-perspective: 2000px;
         }
         
-        /* Memaksa kontainer mempertahankan struktur 3D komponen di dalamnya */
         #book-container { 
             visibility: hidden; 
             box-shadow: 0 30px 70px rgba(0,0,0,0.8);
-            transform-style: preserve-3d;
-            -webkit-transform-style: preserve-3d;
         }
         
-        /* Akselerasi hardware penuh untuk setiap lembar halaman */
+        /* CSS DIBUAT BERSIH: Biarkan engine page-flip yang mengontrol manipulasi 3D-nya */
         .page-content { 
             background: white; 
             width: 100%; 
             height: 100%; 
             overflow: hidden; 
-            transform-style: preserve-3d;
-            -webkit-transform-style: preserve-3d;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
         }
         
         canvas { 
@@ -54,8 +44,6 @@
             height: 100% !important; 
             display: block; 
             object-fit: contain;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
         }
         
         #loader { 
@@ -141,6 +129,7 @@
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
                     
+                    // Set Hardcover hanya pada halaman pertama dan terakhir
                     if (i === 1 || i === totalPages) {
                         pageDiv.setAttribute('data-density', 'hard');
                     }
@@ -156,12 +145,13 @@
                     container.appendChild(pageDiv);
                 }
 
-                // 1. Sembunyikan loader terlebih dahulu
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
-                // 2. Beri jeda 200ms (Settle Time) agar browser selesai memproses RAM, baru engine dinyalakan
+                // Jeda micro-second agar RAM browser bersih sebelum inisialisasi dilakukan
                 setTimeout(() => {
+                    const isDesktop = window.innerWidth >= 768;
+
                     pageFlip = new St.PageFlip(container, {
                         width: size.width, 
                         height: size.height, 
@@ -169,22 +159,30 @@
                         minWidth: 200, maxWidth: 4000,
                         minHeight: 200, maxHeight: 4000,
                         showCover: true,
-                        usePortrait: true, 
-                        flippingTime: 900,       // Kecepatan putaran dioptimalkan ke 900ms agar ayunan cover elegan
+                        // FIX: Gunakan mode 'double' di desktop dan 'portrait' di HP secara dinamis
+                        mode: isDesktop ? 'double' : 'portrait', 
+                        flippingTime: 1000, // Diperlambat sedikit (1 detik) agar ayunan fisik kertas terasa anggun
                         drawShadow: true,
-                        maxShadowOpacity: 0.3    // Meringankan beban render bayangan real-time pada kartu grafis
+                        maxShadowOpacity: 0.3
                     });
 
                     pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
-                    pageFlip.update();
-                }, 200);
+                }, 150);
 
                 window.addEventListener('resize', () => {
                     if (!pageFlip) return;
                     const newSize = calculateBookSize();
+                    const isDesktop = window.innerWidth >= 768;
+                    
                     container.style.width = newSize.containerWidth + 'px';
                     container.style.height = newSize.containerHeight + 'px';
-                    pageFlip.update();
+                    
+                    // Update mode secara real-time jika user mengubah ukuran browser desktop ke mobile
+                    pageFlip.update({
+                        width: newSize.width,
+                        height: newSize.height,
+                        mode: isDesktop ? 'double' : 'portrait'
+                    });
                 });
 
             } catch (error) {
