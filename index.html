@@ -16,6 +16,7 @@
             font-family: system-ui, -apple-system, sans-serif;
         }
         
+        /* Mengunci ruang perspektif 3D sejak awal agar pergerakan cover halus */
         #canvas-container {
             position: relative;
             width: 100vw;
@@ -24,23 +25,28 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            perspective: 2000px; 
+            -webkit-perspective: 2000px;
         }
         
+        /* Memaksa kontainer mempertahankan struktur 3D komponen di dalamnya */
         #book-container { 
             visibility: hidden; 
             box-shadow: 0 30px 70px rgba(0,0,0,0.8);
+            transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
         }
         
-        /* OPTIMASI GPU: Memaksa Chrome menggunakan hardware acceleration agar flip smooth */
+        /* Akselerasi hardware penuh untuk setiap lembar halaman */
         .page-content { 
             background: white; 
             width: 100%; 
             height: 100%; 
             overflow: hidden; 
-            will-change: transform;
-            transform: translateZ(0);
-            -webkit-backface-visibility: hidden;
+            transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
             backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
         
         canvas { 
@@ -48,8 +54,8 @@
             height: 100% !important; 
             display: block; 
             object-fit: contain;
-            will-change: transform;
-            transform: translateZ(0);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
         }
         
         #loader { 
@@ -126,7 +132,6 @@
                 container.style.width = size.containerWidth + 'px';
                 container.style.height = size.containerHeight + 'px';
 
-                // Render dengan skala 2.0 agar teks tajam
                 for (let i = 1; i <= totalPages; i++) {
                     percentText.innerText = `Memproses halaman ${i} dari ${totalPages}... (${Math.round((i / totalPages) * 100)}%)`;
                     
@@ -136,7 +141,6 @@
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
                     
-                    // EFEK HARDCOVER: Berikan densitas keras khusus untuk halaman pertama (Cover) dan terakhir (Penutup)
                     if (i === 1 || i === totalPages) {
                         pageDiv.setAttribute('data-density', 'hard');
                     }
@@ -152,23 +156,28 @@
                     container.appendChild(pageDiv);
                 }
 
+                // 1. Sembunyikan loader terlebih dahulu
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
-                // Inisialisasi engine PageFlip
-                pageFlip = new St.PageFlip(container, {
-                    width: size.width, 
-                    height: size.height, 
-                    size: "stretch", 
-                    minWidth: 200, maxWidth: 4000,
-                    minHeight: 200, maxHeight: 4000,
-                    showCover: true,
-                    usePortrait: true, 
-                    flippingTime: 800, // Menaikkan sedikit durasi (dari 600ms ke 800ms) agar transisi terasa lebih halus dan natural
-                    drawShadow: true
-                });
+                // 2. Beri jeda 200ms (Settle Time) agar browser selesai memproses RAM, baru engine dinyalakan
+                setTimeout(() => {
+                    pageFlip = new St.PageFlip(container, {
+                        width: size.width, 
+                        height: size.height, 
+                        size: "stretch", 
+                        minWidth: 200, maxWidth: 4000,
+                        minHeight: 200, maxHeight: 4000,
+                        showCover: true,
+                        usePortrait: true, 
+                        flippingTime: 900,       // Kecepatan putaran dioptimalkan ke 900ms agar ayunan cover elegan
+                        drawShadow: true,
+                        maxShadowOpacity: 0.3    // Meringankan beban render bayangan real-time pada kartu grafis
+                    });
 
-                pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
+                    pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
+                    pageFlip.update();
+                }, 200);
 
                 window.addEventListener('resize', () => {
                     if (!pageFlip) return;
