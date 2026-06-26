@@ -9,27 +9,35 @@
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
 
     <style>
+        * { box-sizing: border-box; }
         body { 
             margin: 0; padding: 0; background: #121212; 
             width: 100vw; height: 100vh; overflow: hidden; 
             font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            /* Padding ini menjaga agar pinggiran buku tidak menabrak mentok ujung layar */
+            padding: 40px; 
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden;
         }
         
         #book-container { 
             visibility: hidden; 
-            box-shadow: 0 10px 50px rgba(0,0,0,0.6);
-            /* Pastikan tidak ada display flex/grid di container buku ini */
+            box-shadow: 0 10px 50px rgba(0,0,0,0.8);
         }
         
         .page-content { 
             background: white; 
             overflow: hidden; 
-            /* DILARANG KERAS menaruh width/height 100% !important di sini */
         }
         
+        /* Memaksa canvas/gambar mengikuti kotak yang sudah diatur otomatis oleh library */
         .page-content canvas { 
             width: 100%; 
             height: 100%; 
@@ -57,7 +65,9 @@
         <p>Membuka Materi... <span id="percent">0%</span></p>
     </div>
 
-    <div id="book-container"></div>
+    <div id="canvas-container">
+        <div id="book-container"></div>
+    </div>
 
     <script>
         const pdfPath = 'materi.pdf'; 
@@ -65,33 +75,8 @@
         const percentText = document.getElementById('percent');
         
         let pageFlip = null;
-        let pdfRatio = 1.414; 
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
-        function calculateBookSize() {
-            const isDesktop = window.innerWidth >= 768;
-            const maxAllocatedWidth = window.innerWidth * 0.90; 
-            const maxAllocatedHeight = window.innerHeight * 0.90; 
-
-            let maxSinglePageWidth = isDesktop ? maxAllocatedWidth / 2 : maxAllocatedWidth;
-            let maxSinglePageHeight = maxAllocatedHeight;
-
-            let finalSingleWidth, finalSingleHeight;
-
-            if ((maxSinglePageWidth * pdfRatio) <= maxSinglePageHeight) {
-                finalSingleWidth = maxSinglePageWidth;
-                finalSingleHeight = finalSingleWidth * pdfRatio;
-            } else {
-                finalSingleHeight = maxSinglePageHeight;
-                finalSingleWidth = finalSingleHeight / pdfRatio;
-            }
-
-            return {
-                width: Math.floor(finalSingleWidth),
-                height: Math.floor(finalSingleHeight)
-            };
-        }
 
         async function initFlipbook() {
             try {
@@ -99,21 +84,23 @@
                 const pdf = await loadingTask.promise;
                 const totalPages = pdf.numPages;
 
+                // Ambil ukuran proporsi asli dari PDF halaman 1
                 const firstPage = await pdf.getPage(1);
-                const originalViewport = firstPage.getViewport({ scale: 1.0 });
-                pdfRatio = originalViewport.height / originalViewport.width;
-                
-                const size = calculateBookSize();
+                const viewport = firstPage.getViewport({ scale: 1.0 });
 
                 for (let i = 1; i <= totalPages; i++) {
                     percentText.innerText = `Memproses halaman ${i} dari ${totalPages}... (${Math.round((i / totalPages) * 100)}%)`;
                     
                     const page = await pdf.getPage(i);
+                    // Tetap dirender 2x lipat agar gambar dan teks tajam HD
                     const renderViewport = page.getViewport({ scale: 2.0 }); 
                     
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
-                    // Kita matikan paksaan data-density soft, biarkan library jalan natural
+                    
+                    // INI KUNCINYA: Memaksa semua halaman (termasuk cover) menjadi kertas lemas
+                    // agar engsel 3D-nya tidak patah/misah saat dibalik
+                    pageDiv.setAttribute('data-density', 'soft');
                     
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
@@ -132,14 +119,11 @@
                 setTimeout(() => {
                     const isDesktop = window.innerWidth >= 768;
 
-                    // Konfigurasi murni tanpa campur tangan CSS nakal
                     pageFlip = new St.PageFlip(container, {
-                        width: size.width, 
-                        height: size.height, 
-                        size: "stretch", 
-                        minWidth: 300, maxWidth: 3000,
-                        minHeight: 400, maxHeight: 3000,
-                        showCover: true, // SEKARANG INI BISA JALAN NORMAL
+                        width: viewport.width,   // Lebar dasar sesuai PDF asli
+                        height: viewport.height, // Tinggi dasar sesuai PDF asli
+                        size: "fit",             // MAGIC WORD: Otomatis menyesuaikan layar!
+                        showCover: true,         // Cover depan tampil sendirian di kanan
                         mode: isDesktop ? 'double' : 'portrait', 
                         flippingTime: 800, 
                         drawShadow: true,
@@ -149,14 +133,11 @@
                     pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
                 }, 100);
 
+                // Update mode responsif saat HP dimiringkan / layar di-resize
                 window.addEventListener('resize', () => {
                     if (!pageFlip) return;
-                    const newSize = calculateBookSize();
                     const isDesktop = window.innerWidth >= 768;
-                    
                     pageFlip.update({
-                        width: newSize.width,
-                        height: newSize.height,
                         mode: isDesktop ? 'double' : 'portrait'
                     });
                 });
