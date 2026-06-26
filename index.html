@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flipbook Aset Kripto - Full Screen</title>
+    <title>Flipbook Aset Kripto - Full Screen & Download</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.min.js"></script>
@@ -46,12 +46,18 @@
             object-fit: fill; 
         }
         
-        /* Tombol Fullscreen Melayang yang Estetik */
-        .fullscreen-btn {
+        /* Wadah untuk Tombol Kontrol di Pojok Kanan Atas */
+        .controls-container {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 90; /* Di bawah loader (100) tapi di atas buku */
+            display: flex;
+            gap: 10px;
+        }
+        
+        /* Desain Tombol Kontrol (Unduh & Fullscreen) */
+        .control-btn {
             background: rgba(255, 255, 255, 0.08);
             color: #e2e8f0;
             border: 1px solid rgba(255, 255, 255, 0.15);
@@ -69,14 +75,14 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
         
-        .fullscreen-btn:hover {
+        .control-btn:hover {
             background: rgba(56, 189, 248, 0.15);
             border-color: #38bdf8;
             color: #38bdf8;
             transform: translateY(-1px);
         }
 
-        .fullscreen-btn:active {
+        .control-btn:active {
             transform: translateY(1px);
         }
         
@@ -100,12 +106,22 @@
         <p>Membuka Materi... <span id="percent">0%</span></p>
     </div>
 
-    <button id="fullscreen-btn" class="fullscreen-btn">
-        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M1.5 1v3a.5.5 0 0 0 1 0V2h2a.5.5 0 0 0 0-1h-3s-.5 0-.5.5zm13 0a.5.5 0 0 0-.5-.5h-3s-.5 0-.5.5v2a.5.5 0 0 0 1 0V2h2v2a.5.5 0 0 0 1 0v-3zM1.5 15a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1H2v-2a.5.5 0 0 0-1 0v3zm13 0v-3a.5.5 0 0 0-1 0v2h-2a.5.5 0 0 0 0 1h3s.5 0 .5-.5z"/>
-        </svg>
-        <span>Layar Penuh</span>
-    </button>
+    <div class="controls-container">
+        <button id="download-btn" class="control-btn">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+            </svg>
+            <span>Unduh PDF</span>
+        </button>
+
+        <button id="fullscreen-btn" class="control-btn">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M1.5 1v3a.5.5 0 0 0 1 0V2h2a.5.5 0 0 0 0-1h-3s-.5 0-.5.5zm13 0a.5.5 0 0 0-.5-.5h-3s-.5 0-.5.5v2a.5.5 0 0 0 1 0V2h2v2a.5.5 0 0 0 1 0v-3zM1.5 15a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1H2v-2a.5.5 0 0 0-1 0v3zm13 0v-3a.5.5 0 0 0-1 0v2h-2a.5.5 0 0 0 0 1h3s.5 0 .5-.5z"/>
+            </svg>
+            <span>Layar Penuh</span>
+        </button>
+    </div>
 
     <div id="canvas-container">
         <div id="book-container"></div>
@@ -116,6 +132,7 @@
         const container = document.getElementById('book-container');
         const percentText = document.getElementById('percent');
         const fsBtn = document.getElementById('fullscreen-btn');
+        const dlBtn = document.getElementById('download-btn');
         
         let pageFlip = null;
         let pdfRatio = 1.414; 
@@ -218,7 +235,7 @@
                     pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
                 }, 150);
 
-                // Handle perubahan ukuran layar (Resize biasa & transisi Fullscreen)
+                // Handle perubahan ukuran layar
                 window.addEventListener('resize', () => {
                     if (!pageFlip) return;
                     const newSize = calculateBookSize();
@@ -234,7 +251,7 @@
                     });
                 });
 
-                // --- LOGIKA UTAMA FULL SCREEN ---
+                // --- LOGIKA FULL SCREEN ---
                 fsBtn.addEventListener('click', () => {
                     if (!document.fullscreenElement) {
                         document.documentElement.requestFullscreen().catch(err => {
@@ -245,20 +262,28 @@
                     }
                 });
 
-                // Mendeteksi perubahan status fullscreen (Ubah text & icon tombol)
                 document.addEventListener('fullscreenchange', () => {
                     const iconSpan = fsBtn.querySelector('span');
                     const svgPath = fsBtn.querySelector('svg');
                     
                     if (document.fullscreenElement) {
                         iconSpan.innerText = 'Keluar Layar Penuh';
-                        // Mengubah icon SVG menjadi mode "Exit Fullscreen"
                         svgPath.innerHTML = `<path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5zm5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5zM0 11.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 12.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5zm16 0a.5.5 0 0 1-.5.5h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4a1.5 1.5 0 0 1 1.5-1h4a.5.5 0 0 1 .5.5z"/>`;
                     } else {
                         iconSpan.innerText = 'Layar Penuh';
-                        // Mengembalikan icon ke mode "Enter Fullscreen"
                         svgPath.innerHTML = `<path d="M1.5 1v3a.5.5 0 0 0 1 0V2h2a.5.5 0 0 0 0-1h-3s-.5 0-.5.5zm13 0a.5.5 0 0 0-.5-.5h-3s-.5 0-.5.5v2a.5.5 0 0 0 1 0V2h2v2a.5.5 0 0 0 1 0v-3zM1.5 15a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 0-1H2v-2a.5.5 0 0 0-1 0v3zm13 0v-3a.5.5 0 0 0-1 0v2h-2a.5.5 0 0 0 0 1h3s.5 0 .5-.5z"/>`;
                     }
+                });
+
+                // --- LOGIKA DOWNLOAD PDF ---
+                dlBtn.addEventListener('click', () => {
+                    const link = document.createElement('a');
+                    link.href = pdfPath;
+                    // Nama file saat diunduh oleh pengguna
+                    link.download = 'Buku_Saku_Panduan_Mengenal_Aset_Kripto.pdf'; 
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                 });
 
             } catch (error) {
