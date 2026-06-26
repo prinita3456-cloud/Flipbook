@@ -51,17 +51,16 @@
             position: fixed;
             top: 20px;
             left: 20px;
-            z-index: 90; /* Sejajar dengan tombol kontrol, di bawah loader */
+            z-index: 90; 
             display: flex;
             align-items: center;
-            pointer-events: none; /* Supaya tidak mengganggu klik di area sekitar logo */
+            pointer-events: none; 
         }
 
         .logo-img {
-            height: 45px; /* Ukuran pas yang pas dengan tinggi tombol kanan */
+            height: 55px; /* DIUBAH: Diperbesar dari 45px ke 55px agar lebih kelihatan */
             width: auto;
             object-fit: contain;
-            /* Memberi bayangan halus agar logo tetap terlihat jelas di background gelap */
             filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4)); 
         }
         
@@ -126,7 +125,7 @@
     </div>
 
     <div class="logo-container">
-        <img src="logo-ifii.png" alt="Logo IFII" class="logo-img">
+        <img src="logo-ifii.jpg" alt="Logo IFII" class="logo-img">
     </div>
 
     <div class="controls-container">
