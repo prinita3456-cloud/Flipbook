@@ -16,7 +16,6 @@
             font-family: system-ui, -apple-system, sans-serif;
         }
         
-        /* Wadah utama memenuhi 100% viewport */
         #canvas-container {
             position: relative;
             width: 100vw;
@@ -27,15 +26,31 @@
             align-items: center;
         }
         
-        /* Ukuran buku diatur dinamis via JavaScript agar tidak terpotong */
         #book-container { 
             visibility: hidden; 
             box-shadow: 0 30px 70px rgba(0,0,0,0.8);
-            transition: opacity 0.3s ease;
         }
         
-        .page-content { background: white; width: 100%; height: 100%; overflow: hidden; }
-        canvas { width: 100% !important; height: 100% !important; display: block; object-fit: contain; }
+        /* OPTIMASI GPU: Memaksa Chrome menggunakan hardware acceleration agar flip smooth */
+        .page-content { 
+            background: white; 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            will-change: transform;
+            transform: translateZ(0);
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        
+        canvas { 
+            width: 100% !important; 
+            height: 100% !important; 
+            display: block; 
+            object-fit: contain;
+            will-change: transform;
+            transform: translateZ(0);
+        }
         
         #loader { 
             position: fixed; color: white; z-index: 100; background: #121212; inset: 0;
@@ -67,15 +82,12 @@
         const percentText = document.getElementById('percent');
         
         let pageFlip = null;
-        let pdfRatio = 1.414; // Default rasio (A4), akan diperbarui otomatis saat PDF dimuat
+        let pdfRatio = 1.414; 
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // Fungsi kalkulasi ukuran adaptif (agar proporsional dan tidak terpotong)
         function calculateBookSize() {
             const isDesktop = window.innerWidth >= 768;
-            
-            // Memberi batas aman agar tidak menempel ke ujung layar browser (92% lebar, 86% tinggi)
             const maxAllocatedWidth = window.innerWidth * 0.92; 
             const maxAllocatedHeight = window.innerHeight * 0.86; 
 
@@ -84,7 +96,6 @@
 
             let finalSingleWidth, finalSingleHeight;
 
-            // Cari pembatas terkecil berdasarkan rasio PDF asli
             if ((maxSinglePageWidth * pdfRatio) <= maxSinglePageHeight) {
                 finalSingleWidth = maxSinglePageWidth;
                 finalSingleHeight = finalSingleWidth * pdfRatio;
@@ -107,17 +118,15 @@
                 const pdf = await loadingTask.promise;
                 const totalPages = pdf.numPages;
 
-                // 1. Dapatkan aspek rasio asli dokumen langsung dari halaman pertama
                 const firstPage = await pdf.getPage(1);
                 const originalViewport = firstPage.getViewport({ scale: 1.0 });
                 pdfRatio = originalViewport.height / originalViewport.width;
                 
-                // 2. Hitung ukuran dimensi awal untuk container HTML
                 const size = calculateBookSize();
                 container.style.width = size.containerWidth + 'px';
                 container.style.height = size.containerHeight + 'px';
 
-                // 3. Render halaman dengan skala 2.0 (Skala HD agar tulisan tajam saat ditarik melar)
+                // Render dengan skala 2.0 agar teks tajam
                 for (let i = 1; i <= totalPages; i++) {
                     percentText.innerText = `Memproses halaman ${i} dari ${totalPages}... (${Math.round((i / totalPages) * 100)}%)`;
                     
@@ -126,6 +135,11 @@
                     
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
+                    
+                    // EFEK HARDCOVER: Berikan densitas keras khusus untuk halaman pertama (Cover) dan terakhir (Penutup)
+                    if (i === 1 || i === totalPages) {
+                        pageDiv.setAttribute('data-density', 'hard');
+                    }
                     
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
@@ -138,35 +152,29 @@
                     container.appendChild(pageDiv);
                 }
 
-                // 4. Sembunyikan loader & munculkan buku
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
-                // 5. Inisialisasi engine PageFlip dengan ukuran dasar hasil kalkulasi
+                // Inisialisasi engine PageFlip
                 pageFlip = new St.PageFlip(container, {
                     width: size.width, 
                     height: size.height, 
-                    size: "stretch", // Memaksa isi halaman melar mengikuti pembungkusnya secara dinamis
+                    size: "stretch", 
                     minWidth: 200, maxWidth: 4000,
                     minHeight: 200, maxHeight: 4000,
                     showCover: true,
                     usePortrait: true, 
-                    flippingTime: 600,
+                    flippingTime: 800, // Menaikkan sedikit durasi (dari 600ms ke 800ms) agar transisi terasa lebih halus dan natural
                     drawShadow: true
                 });
 
                 pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
 
-                // 6. Deteksi perubahan ukuran browser / jendela popup secara real-time
                 window.addEventListener('resize', () => {
                     if (!pageFlip) return;
                     const newSize = calculateBookSize();
-                    
-                    // Update dimensi wadah pembungkus luar
                     container.style.width = newSize.containerWidth + 'px';
                     container.style.height = newSize.containerHeight + 'px';
-                    
-                    // Perintahkan sistem page-flip untuk menyesuaikan ulang posisinya
                     pageFlip.update();
                 });
 
