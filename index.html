@@ -10,53 +10,54 @@
 
     <style>
         * { box-sizing: border-box; }
-        
-        /* Mengunci layar agar buku saku selalu persis di tengah */
         body { 
             margin: 0; padding: 0; background: #121212; 
-            height: 100vh; width: 100vw;
+            width: 100vw; height: 100vh; overflow: hidden; 
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; 
-            font-family: system-ui, sans-serif;
         }
         
-        /* Membatasi ruang mekar buku saku agar tidak jadi raksasa */
-        .wadah-buku {
-            width: 95vw; 
-            height: 95vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        #book { 
-            display: none; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        #book-container { 
+            visibility: hidden; 
+            box-shadow: 0 10px 50px rgba(0,0,0,0.6);
         }
         
-        .page { 
-            background-color: white; 
-            overflow: hidden; 
-        }
-        
-        .page canvas { 
+        .page-content { 
+            background: white; 
             width: 100%; 
             height: 100%; 
+            overflow: hidden; 
+            /* Memastikan tidak ada border aneh yang bikin engsel misah */
+            border: none !important;
+        }
+        
+        canvas { 
+            width: 100% !important; 
+            height: 100% !important; 
             display: block; 
+            /* Mengunci gambar agar rapat sempurna ke engsel tengah */
+            object-fit: fill; 
         }
         
         #loader { 
-            position: fixed; inset: 0; background: #121212; color: white; z-index: 100;
+            position: fixed; color: white; z-index: 100; background: #121212; inset: 0;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            text-align: center;
+            text-align: center; padding: 20px;
         }
         .spinner { 
             border: 4px solid rgba(255,255,255,0.1); border-left-color: #38bdf8; 
             border-radius: 50%; width: 45px; height: 45px; animation: spin 1s linear infinite; margin-bottom: 15px;
         }
-        #progress { color: #38bdf8; font-weight: bold; margin-top: 5px; display: block;}
+        #percent { color: #38bdf8; font-weight: bold; display: block; margin-top: 5px; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
@@ -64,83 +65,130 @@
 
     <div id="loader">
         <div class="spinner"></div>
-        <p>Membuka Panduan... <span id="progress">0%</span></p>
+        <p>Membuka Materi... <span id="percent">0%</span></p>
     </div>
 
-    <div class="wadah-buku">
-        <div id="book"></div>
+    <div id="canvas-container">
+        <div id="book-container"></div>
     </div>
 
     <script>
         const pdfPath = 'materi.pdf'; 
+        const container = document.getElementById('book-container');
+        const percentText = document.getElementById('percent');
+        
+        let pageFlip = null;
+        let pdfRatio = 1.414; 
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        async function init() {
-            try {
-                const pdf = await pdfjsLib.getDocument(pdfPath).promise;
-                const total = pdf.numPages;
-                const bookEl = document.getElementById('book');
-                
-                // Ambil ukuran asli buku saku dari halaman 1
-                const page1 = await pdf.getPage(1);
-                const viewport = page1.getViewport({ scale: 1.5 });
-                const baseWidth = viewport.width;
-                const baseHeight = viewport.height;
+        function calculateBookSize() {
+            const isDesktop = window.innerWidth >= 768;
+            const maxAllocatedWidth = window.innerWidth * 0.90; 
+            const maxAllocatedHeight = window.innerHeight * 0.90; 
 
-                for(let i = 1; i <= total; i++) {
-                    document.getElementById('progress').innerText = `${Math.round((i/total)*100)}%`;
+            let maxSinglePageWidth = isDesktop ? maxAllocatedWidth / 2 : maxAllocatedWidth;
+            let maxSinglePageHeight = maxAllocatedHeight;
+
+            let finalSingleWidth, finalSingleHeight;
+
+            if ((maxSinglePageWidth * pdfRatio) <= maxSinglePageHeight) {
+                finalSingleWidth = maxSinglePageWidth;
+                finalSingleHeight = finalSingleWidth * pdfRatio;
+            } else {
+                finalSingleHeight = maxSinglePageHeight;
+                finalSingleWidth = finalSingleHeight / pdfRatio;
+            }
+
+            return {
+                width: Math.floor(finalSingleWidth),
+                height: Math.floor(finalSingleHeight),
+                containerWidth: Math.floor(isDesktop ? finalSingleWidth * 2 : finalSingleWidth),
+                containerHeight: Math.floor(finalSingleHeight)
+            };
+        }
+
+        async function initFlipbook() {
+            try {
+                const loadingTask = pdfjsLib.getDocument(pdfPath);
+                const pdf = await loadingTask.promise;
+                const totalPages = pdf.numPages;
+
+                const firstPage = await pdf.getPage(1);
+                const originalViewport = firstPage.getViewport({ scale: 1.0 });
+                pdfRatio = originalViewport.height / originalViewport.width;
+                
+                const size = calculateBookSize();
+                container.style.width = size.containerWidth + 'px';
+                container.style.height = size.containerHeight + 'px';
+
+                for (let i = 1; i <= totalPages; i++) {
+                    percentText.innerText = `Memproses halaman ${i} dari ${totalPages}... (${Math.round((i / totalPages) * 100)}%)`;
                     
                     const page = await pdf.getPage(i);
-                    // Render HD untuk teks
-                    const renderViewport = page.getViewport({ scale: 2.0 }); 
+                    const renderViewport = page.getViewport({ scale: 2.0 }); // Skala tinggi agar teks tidak pecah
                     
                     const pageDiv = document.createElement('div');
-                    pageDiv.className = 'page';
+                    pageDiv.className = 'page-content';
                     
-                    // Kunci anti-patah engsel untuk cover dan isi
-                    pageDiv.setAttribute('data-density', 'soft'); 
+                    // MEMAKSA SEMUA HALAMAN TERMASUK COVER MENJADI SOFT/LUNAK AGAR TIDAK PATAH
+                    pageDiv.setAttribute('data-density', 'soft');
                     
                     const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
                     canvas.width = renderViewport.width;
                     canvas.height = renderViewport.height;
-                    const ctx = canvas.getContext('2d');
-                    await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+                    
+                    await page.render({ canvasContext: context, viewport: renderViewport }).promise;
                     
                     pageDiv.appendChild(canvas);
-                    bookEl.appendChild(pageDiv);
+                    container.appendChild(pageDiv);
                 }
 
                 document.getElementById('loader').style.display = 'none';
-                bookEl.style.display = 'block';
+                container.style.visibility = 'visible';
 
-                const isDesktop = window.innerWidth >= 768;
+                setTimeout(() => {
+                    const isDesktop = window.innerWidth >= 768;
 
-                const pageFlip = new St.PageFlip(bookEl, {
-                    width: baseWidth,   
-                    height: baseHeight, 
-                    size: "fit", // Sekarang 'fit' dijamin aman karena dikurung di dalam Flexbox
-                    showCover: true,
-                    mode: isDesktop ? 'double' : 'portrait',
-                    drawShadow: true,
-                    maxShadowOpacity: 0.3
-                });
+                    pageFlip = new St.PageFlip(container, {
+                        width: size.width, 
+                        height: size.height, 
+                        size: "stretch", 
+                        minWidth: 200, maxWidth: 3000,
+                        minHeight: 200, maxHeight: 3000,
+                        showCover: true, 
+                        mode: isDesktop ? 'double' : 'portrait', 
+                        flippingTime: 800, 
+                        drawShadow: true,
+                        maxShadowOpacity: 0.3
+                    });
 
-                pageFlip.loadFromHTML(document.querySelectorAll('.page'));
+                    pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
+                }, 150);
 
                 window.addEventListener('resize', () => {
-                    const desktopMode = window.innerWidth >= 768;
+                    if (!pageFlip) return;
+                    const newSize = calculateBookSize();
+                    const isDesktop = window.innerWidth >= 768;
+                    
+                    container.style.width = newSize.containerWidth + 'px';
+                    container.style.height = newSize.containerHeight + 'px';
+                    
                     pageFlip.update({
-                        mode: desktopMode ? 'double' : 'portrait'
+                        width: newSize.width,
+                        height: newSize.height,
+                        mode: isDesktop ? 'double' : 'portrait'
                     });
                 });
 
             } catch (error) {
                 console.error(error);
-                document.getElementById('loader').innerHTML = `<p style="color: #f87171;">Gagal memuat materi.pdf</p>`;
+                percentText.innerHTML = `<span style="color: #f87171;">Gagal memuat PDF. Pastikan file materi.pdf tersedia.</span>`;
             }
         }
 
-        init();
+        initFlipbook();
     </script>
 </body>
 </html>
