@@ -31,7 +31,6 @@
             box-shadow: 0 30px 70px rgba(0,0,0,0.8);
         }
         
-        /* CSS DIBUAT BERSIH: Biarkan engine page-flip yang mengontrol manipulasi 3D-nya */
         .page-content { 
             background: white; 
             width: 100%; 
@@ -43,7 +42,8 @@
             width: 100% !important; 
             height: 100% !important; 
             display: block; 
-            object-fit: contain;
+            /* Mengunci semua halaman (termasuk cover & penutup) agar menempel rapat di engsel tengah */
+            object-fit: fill; 
         }
         
         #loader { 
@@ -129,10 +129,8 @@
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'page-content';
                     
-                    // Set Hardcover hanya pada halaman pertama dan terakhir
-                    if (i === 1 || i === totalPages) {
-                        pageDiv.setAttribute('data-density', 'hard');
-                    }
+                    // SEMUA HALAMAN DISERAGAMKAN: Tidak ada data-density="hard" baik di awal maupun di akhir
+                    // Ini memastikan engsel halaman 1 dan halaman 50 tidak rusak atau meleset
                     
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
@@ -148,7 +146,6 @@
                 document.getElementById('loader').style.display = 'none';
                 container.style.visibility = 'visible';
 
-                // Jeda micro-second agar RAM browser bersih sebelum inisialisasi dilakukan
                 setTimeout(() => {
                     const isDesktop = window.innerWidth >= 768;
 
@@ -158,16 +155,15 @@
                         size: "stretch", 
                         minWidth: 200, maxWidth: 4000,
                         minHeight: 200, maxHeight: 4000,
-                        showCover: true,
-                        // FIX: Gunakan mode 'double' di desktop dan 'portrait' di HP secara dinamis
+                        showCover: true, // Membuat halaman pertama (awal) dan terakhir (akhir) tampil sebagai single cover yang rapi
                         mode: isDesktop ? 'double' : 'portrait', 
-                        flippingTime: 1000, // Diperlambat sedikit (1 detik) agar ayunan fisik kertas terasa anggun
+                        flippingTime: 750, 
                         drawShadow: true,
-                        maxShadowOpacity: 0.3
+                        maxShadowOpacity: 0.25
                     });
 
                     pageFlip.loadFromHTML(document.querySelectorAll(".page-content"));
-                }, 150);
+                }, 100);
 
                 window.addEventListener('resize', () => {
                     if (!pageFlip) return;
@@ -177,7 +173,6 @@
                     container.style.width = newSize.containerWidth + 'px';
                     container.style.height = newSize.containerHeight + 'px';
                     
-                    // Update mode secara real-time jika user mengubah ukuran browser desktop ke mobile
                     pageFlip.update({
                         width: newSize.width,
                         height: newSize.height,
